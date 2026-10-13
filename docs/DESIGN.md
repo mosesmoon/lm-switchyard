@@ -90,6 +90,7 @@ flowchart LR
 ```
 
 - **Manager**：Go 撰寫的單一執行檔，內嵌 React + TypeScript 前端。安裝時下載一個檔案、執行 install 就會註冊成 systemd 服務或 Windows 服務，主機上不必先裝 Python、Node 或 Docker。
+- **名稱**：執行檔與服務名稱都是 `lm-switchyard`，CLI 另有短名 `lmsy`。
 - **Windows 上的 Manager**：只管理遠端 Linux 主機。Windows 本機跑 vLLM 屬於第二階段（WSL2）。
 - **桌面版**：Wails v2 包同一套前端，當薄客戶端連到一台或多台 Manager，另提供系統匣通知。
 - **資料**：所有設定、指標、日誌索引都存在 Manager 內嵌的 SQLite，不另外安裝資料庫。
