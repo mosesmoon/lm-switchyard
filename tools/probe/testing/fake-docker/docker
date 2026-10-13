@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# A fake docker CLI for testing probe.sh without Docker or a GPU.
+# Pretends a ROCm vLLM container is running; "docker run" starts mock_vllm.py
+# on the published port and records the arguments in $FAKE_DOCKER_LOG.
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+LOG="${FAKE_DOCKER_LOG:-/tmp/fake-docker.log}"
+STATE="${FAKE_DOCKER_STATE:-/tmp/fake-docker.state}"
+echo "docker $*" >>"$LOG"
+
+case "$1" in
+  info) exit 0 ;;
+  version) echo "27.0.0" ;;
+  ps)
+    printf 'abc123\trocm/vllm-dev:gfx1151\tvllm-main\tvllm serve taide/Gemma-3-TAIDE-12b-Chat --enforce-eager --port 8000 --api-key sk-secret\n'
+    printf 'def456\tquay.io/micytao/vllm-playground:latest\tvllm-playground\tpython run.py\n'
+    ;;
+  inspect)
+    fmt="$3"
+    case "$fmt" in
+      *'.Config.Image'*) echo "rocm/vllm-dev:gfx1151" ;;
+      *'.Config.Env'*) printf 'HSA_OVERRIDE_GFX_VERSION=11.5.1\nHF_TOKEN=hf_abcdefghijklmnopqrstuvwxyz\nPATH=/usr/bin\nVLLM_ROCM_USE_AITER=0\n' ;;
+      *'.Config.Cmd'*) echo '["vllm","serve","taide/Gemma-3-TAIDE-12b-Chat","--enforce-eager"] null' ;;
+      *'.State.Running'*) [ -f "$STATE" ] && echo true || echo false ;;
+    esac
+    ;;
+  rm)
+    if [ -f "$STATE" ]; then kill "$(cat "$STATE")" 2>/dev/null; rm -f "$STATE"; fi
+    ;;
+  run)
+    port="$(printf '%s\n' "$@" | sed -nE 's/^127\.0\.0\.1:([0-9]+):8000$/\1/p')"
+    python3 "$HERE/../mock_vllm.py" --port "$port" >/dev/null 2>&1 &
+    echo $! >"$STATE"
+    echo "fakecontainerid"
+    ;;
+  logs) echo "fake container log line" ;;
+  port) ;;
+  images) ;;
+  exec) echo "vllm 0.0-fake" ;;
+  *) echo "fake docker: unhandled: $*" >&2; exit 1 ;;
+esac
